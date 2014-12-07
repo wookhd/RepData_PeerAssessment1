@@ -4,22 +4,130 @@ output:
   html_document:
     keep_md: true
 ---
-
+## Environment setup
+```{r envsetup, echo=TRUE}
+suppressMessages(library(dplyr))
+library(ggplot2)
+setwd("C:/MOOC/module5/assessments1/RepData_PeerAssessment1")
+```
 
 ## Loading and preprocessing the data
-
-
+```{r loaddata, echo=TRUE}
+data = read.csv("activity.csv",header=T)
+data$date = as.Date(data$date,"%Y-%m-%d")
+data = tbl_df(data)
+```
 
 ## What is mean total number of steps taken per day?
+```{r dailytotalsteps, echp=TRUE}
+daily_steps <- data %>%
+                  group_by(date) %>%
+                  summarise(total_steps = sum(steps, na.rm=TRUE))
 
+hist(daily_steps$total_steps,
+main=" ",
+breaks=10,
+xlab="Total Number of Steps Taken Daily")
+```
 
+```{r dailymeansteps, echo=TRUE}
+daily_meansteps <- data %>%
+                  group_by(date) %>%
+                  summarise(mean_steps = mean(steps, na.rm=TRUE))
+daily_meansteps
+mean(daily_meansteps$mean_steps,na.rm=TRUE)
+```
 
+```{r dailymediansteps, echo=TRUE}
+daily_mediansteps <- data %>%
+                  filter(!is.na(steps) & steps > 0) %>%
+                  group_by(date) %>%
+                  summarise(median_steps = median(steps))
+daily_mediansteps
+median(daily_mediansteps$median_steps)
+```
 ## What is the average daily activity pattern?
+```{r averagedailyactivity, echo=TRUE}
+avg_daily_pattern <- data %>%
+                  filter(!is.na(steps) & steps > 0) %>%
+                  group_by(interval) %>%
+                  summarise(avg_daily_steps = mean(steps))
+avg_daily_pattern %>% arrange(desc(avg_daily_steps))
 
+qplot(x=interval, y=avg_daily_steps, data = avg_daily_pattern,  geom = "line",
+      xlab="5-Minute Interval (military time)",
+      ylab="Number of Step Count",
+      main="Average Number of Steps Taken Averaged Across All Days"
+     )
 
+```
+  
+Observations:
+At interval 8:35am with the highest mean steps of 352.48.
 
 ## Imputing missing values
+```{r totalmissingvalues, echo=TRUE}
 
+daily_nasteps <- data %>%
+                  filter(is.na(steps)) %>%
+                  group_by(date) %>%
+                  summarise(count_nasteps = sum(is.na(steps)))
+daily_nasteps
+sum(daily_nasteps$count_nasteps)
+```
 
+```{r fillmissingvalues, echo=TRUE}
+imput_median = median(daily_mediansteps$median_steps)
+
+imput_data = data
+imput_data$steps[is.na(imput_data$steps)] <- imput_median
+```
+
+```{r histomeanmedian, echo=TRUE}
+imput_daily_steps <- imput_data %>%
+                  group_by(date) %>%
+                  summarise(total_steps = sum(steps))
+
+hist(imput_daily_steps$total_steps,
+main=" ",
+breaks=10,
+xlab="Total Number of Steps Taken Daily")
+
+imput_daily_meansteps <- imput_data %>%
+                  group_by(date) %>%
+                  summarise(mean_steps = mean(steps))
+imput_daily_meansteps
+mean(imput_daily_meansteps$mean_steps)
+
+imput_daily_mediansteps <- imput_data %>% 
+                  filter(steps > 0) %>%
+                  group_by(date) %>%
+                  summarise(median_steps = median(steps))
+imput_daily_mediansteps
+median(imput_daily_mediansteps$median_steps)
+```
+  
+The mean are close to each other while the median has the same value.  
+It seem to have little impact.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r activitypatterns, echo=TRUE}
+Sys.setlocale("LC_TIME","English")
+
+dataweek = data %>%
+               mutate(daytype = ifelse(weekdays(date) %in% c("Satuday", "Sunday"), 
+                               "weekend", "weekday")) %>%
+               filter(!is.na(steps) & steps > 0) %>% 
+               group_by(interval,daytype) %>%
+               summarise(avg_daily_steps = mean(steps))
+
+dataweek
+
+p2 <- qplot(x=interval, y=avg_daily_steps, data = dataweek,  geom = "line",
+      xlab="5-Minute Interval (military time)",
+      ylab="Number of Step Count",
+      main="Average Number of Steps Taken Averaged Across All Days"
+      )
+
+p2 + facet_grid(daytype ~ .)
+```
