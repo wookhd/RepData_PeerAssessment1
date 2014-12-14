@@ -237,6 +237,9 @@ At interval 8:35am with the highest mean steps of 352.48.
 
 ## Imputing missing values
 
+The strategy is using the median total number of steps per day for filling in all of the missing values in the dataset.
+
+
 ```r
 daily_nasteps <- data %>%
                   filter(is.na(steps)) %>%
